@@ -3,232 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DELTA • Система моніторингу</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Δ DELTA • Центр управління СБУ</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="css/delta.css">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="logo">
-                <div class="delta-symbol">Δ</div>
-                <span class="logo-text">DELTA</span>
+<body class="delta-system">
+    <!-- System Overlay -->
+    <div class="system-overlay">
+        <!-- Top Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span class="system-tag">Δ DELTA v4.2.7</span>
+                <span class="security-level">РІВЕНЬ: ДЕЛЬТА</span>
+                <span class="operator-id">ОПЕРАТОР: СБУ-4872</span>
             </div>
-            
-            <nav class="nav-menu">
-                <a href="#" class="nav-item active">
-                    <span class="nav-icon">🗺️</span>
-                    Мапа
-                </a>
-                <a href="#" class="nav-item">
-                    <span class="nav-icon">📊</span>
-                    Аналітика
-                </a>
-                <a href="#" class="nav-item">
-                    <span class="nav-icon">👥</span>
-                    Особи
-                </a>
-                <a href="#" class="nav-item">
-                    <span class="nav-icon">📹</span>
-                    Камери
-                </a>
-                <a href="#" class="nav-item">
-                    <span class="nav-icon">⚙️</span>
-                    Налаштування
-                </a>
-            </nav>
+            <div class="status-center">
+                <span class="timestamp" id="liveTimestamp"></span>
+            </div>
+            <div class="status-right">
+                <span class="connection-status">🟢 ЗВ'ЯЗОК: АКТИВНИЙ</span>
+                <span class="encryption-status">🔒 ШИФРУВАННЯ: AES-256</span>
+            </div>
+        </div>
 
-            <div class="system-status">
-                <div class="status-item">
-                    <div class="status-indicator online"></div>
-                    <span>Система</span>
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Left Panel - Navigation & Controls -->
+            <div class="left-panel">
+                <!-- System Controls -->
+                <div class="control-group">
+                    <h3>СИСТЕМНІ КОНТРОЛИ</h3>
+                    <div class="control-buttons">
+                        <button class="ctrl-btn primary" onclick="systemScan()">
+                            <span class="btn-icon">🔍</span>
+                            СКАНУВАТИ СИСТЕМУ
+                        </button>
+                        <button class="ctrl-btn" onclick="toggleDatabaseSync()">
+                            <span class="btn-icon">🔄</span>
+                            СИНХРОНІЗАЦІЯ
+                        </button>
+                        <button class="ctrl-btn" onclick="emergencyProtocol()">
+                            <span class="btn-icon">🚨</span>
+                            ЕКСТРЕНИЙ РЕЖИМ
+                        </button>
+                    </div>
                 </div>
-                <div class="status-item">
-                    <div class="status-indicator active"></div>
-                    <span>База даних</span>
+
+                <!-- Quick Access -->
+                <div class="control-group">
+                    <h3>ШВИДКИЙ ДОСТУП</h3>
+                    <div class="quick-access">
+                        <button class="access-btn" onclick="showPersonSearch()">
+                            <span class="access-icon">👤</span>
+                            ПОШУК ОСІБ
+                        </button>
+                        <button class="access-btn" onclick="showVehicleSearch()">
+                            <span class="access-icon">🚗</span>
+                            ТРАНСПОРТ
+                        </button>
+                        <button class="access-btn" onclick="showCameraGrid()">
+                            <span class="access-icon">📹</span>
+                            ВСІ КАМЕРИ
+                        </button>
+                        <button class="access-btn" onclick="showAnalytics()">
+                            <span class="access-icon">📊</span>
+                            АНАЛІТИКА
+                        </button>
+                    </div>
                 </div>
-                <div class="status-item">
-                    <div class="status-indicator recording"></div>
-                    <span>Запис</span>
+
+                <!-- Live Feeds -->
+                <div class="control-group">
+                    <h3>ПРЯМІ ЕФІРИ</h3>
+                    <div class="live-feeds">
+                        <div class="feed-item active" data-feed="central">
+                            <span class="feed-status">🔴</span>
+                            ЦЕНТРАЛЬНИЙ ОФІС
+                        </div>
+                        <div class="feed-item" data-feed="border">
+                            <span class="feed-status">🟢</span>
+                            КОРДОННИЙ КОНТРОЛЬ
+                        </div>
+                        <div class="feed-item" data-feed="transport">
+                            <span class="feed-status">🟡</span>
+                            ТРАНСПОРТНІ ВУЗЛИ
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Metrics -->
+                <div class="control-group">
+                    <h3>МЕТРИКИ СИСТЕМИ</h3>
+                    <div class="metrics">
+                        <div class="metric">
+                            <span class="metric-label">НАВАНТАЖЕННЯ ЦП:</span>
+                            <div class="metric-bar">
+                                <div class="metric-fill" style="width: 45%"></div>
+                            </div>
+                            <span class="metric-value">45%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">ПАМ'ЯТЬ:</span>
+                            <div class="metric-bar">
+                                <div class="metric-fill" style="width: 68%"></div>
+                            </div>
+                            <span class="metric-value">68%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">МЕРЕЖА:</span>
+                            <div class="metric-bar">
+                                <div class="metric-fill" style="width: 32%"></div>
+                            </div>
+                            <span class="metric-value">32%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel - Map & Main Content -->
+            <div class="center-panel">
+                <!-- Map Container -->
+                <div class="map-container">
+                    <div class="map-header">
+                        <h2>ІНТЕГРОВАНА КАРТА МОНІТОРИНГУ</h2>
+                        <div class="map-tools">
+                            <button class="tool-btn" onclick="toggleLayer('satellite')">🛰️ СУПУТНИК</button>
+                            <button class="tool-btn" onclick="toggleLayer('traffic')">🚦 ТРАФІК</button>
+                            <button class="tool-btn" onclick="toggleHeatmap()">🔥 ТЕПЛОВА КАРТА</button>
+                            <button class="tool-btn" onclick="scanArea()">📡 СКАНУВАТИ РАЙОН</button>
+                        </div>
+                    </div>
+                    <div id="mainMap" class="main-map"></div>
+                    <div class="map-overlay-controls">
+                        <button class="overlay-btn" onclick="showAllUnits()">ВСІ ОДИНИЦІ</button>
+                        <button class="overlay-btn" onclick="showCameras()">КАМЕРИ</button>
+                        <button class="overlay-btn" onclick="showPatrols()">ПАТРУЛІ</button>
+                        <button class="overlay-btn" onclick="showAlerts()">ТРИВОГИ</button>
+                    </div>
+                </div>
+
+                <!-- Data Grid -->
+                <div class="data-grid">
+                    <div class="data-section">
+                        <h3>АКТИВНІ ПОДІЇ</h3>
+                        <div class="events-list" id="eventsList">
+                            <!-- Events will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="data-section">
+                        <h3>ОСТАННІ СПОСТЕРЕЖЕННЯ</h3>
+                        <div class="observations-list" id="observationsList">
+                            <!-- Observations will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Details & Analysis -->
+            <div class="right-panel">
+                <!-- Selected Object -->
+                <div class="detail-panel">
+                    <h3>ОБРАНИЙ ОБ'ЄКТ</h3>
+                    <div class="object-details" id="objectDetails">
+                        <div class="no-selection">
+                            <div class="delta-logo">Δ</div>
+                            <p>Оберіть об'єкт на карті для перегляду деталей</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camera Feed -->
+                <div class="camera-panel">
+                    <h3>ВІДЕОСПОСТЕРЕЖЕННЯ</h3>
+                    <div class="camera-feed" id="cameraFeed">
+                        <div class="feed-placeholder">
+                            <div class="camera-icon">📹</div>
+                            <p>Камера не обрана</p>
+                        </div>
+                    </div>
+                    <div class="camera-controls">
+                        <button class="cam-ctrl" onclick="recordFeed()">⏺️ ЗАПИС</button>
+                        <button class="cam-ctrl" onclick="captureFrame()">📸 ЗНИМОК</button>
+                        <button class="cam-ctrl" onclick="toggleAnalysis()">🔍 АНАЛІЗ</button>
+                        <button class="cam-ctrl" onclick="toggleNightVision()">🌙 НІЧНИЙ</button>
+                    </div>
+                </div>
+
+                <!-- Analysis Tools -->
+                <div class="analysis-panel">
+                    <h3>ІНСТРУМЕНТИ АНАЛІЗУ</h3>
+                    <div class="analysis-tools">
+                        <button class="analysis-btn" onclick="facialRecognition()">
+                            👁️ РОЗПІЗНАННЯ ОБЛИЧ
+                        </button>
+                        <button class="analysis-btn" onclick="licensePlateScan()">
+                            🚗 НОМЕРИ ТЗ
+                        </button>
+                        <button class="analysis-btn" onclick="behaviorAnalysis()">
+                            🎭 АНАЛІЗ ПОВЕДІНКИ
+                        </button>
+                        <button class="analysis-btn" onclick="crossReference()">
+                            🔗 ПЕРЕХРЕСНІ ДАНІ
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-left">
-                    <h1>Система моніторингу DELTA</h1>
-                    <div class="breadcrumb">Головна / Мапа</div>
-                </div>
-                <div class="header-right">
-                    <div class="search-box">
-                        <input type="text" placeholder="Пошук об'єктів, осіб, адрес...">
-                        <button>🔍</button>
-                    </div>
-                    <div class="user-menu">
-                        <div class="user-avatar">СБУ</div>
-                        <span class="user-name">Оператор #4872</span>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">🏢</div>
-                    <div class="stat-info">
-                        <div class="stat-number">1,247</div>
-                        <div class="stat-label">Об'єктів</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">👁️</div>
-                    <div class="stat-info">
-                        <div class="stat-number">5,892</div>
-                        <div class="stat-label">Камер</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-info">
-                        <div class="stat-number">284,156</div>
-                        <div class="stat-label">Осіб</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🚨</div>
-                    <div class="stat-info">
-                        <div class="stat-number">23</div>
-                        <div class="stat-label">Подій</div>
-                    </div>
-                </div>
+        <!-- Bottom Console -->
+        <div class="console-panel">
+            <div class="console-header">
+                <span>СИСТЕМНИЙ КОНСОЛЬ</span>
+                <button class="console-btn" onclick="clearConsole()">ОЧИСТИТИ</button>
             </div>
-
-            <!-- Map Section -->
-            <div class="map-container">
-                <div class="map-header">
-                    <h2>Мапа моніторингу України</h2>
-                    <div class="map-controls">
-                        <button class="control-btn">🌍 Супутник</button>
-                        <button class="control-btn">🎯 Мітки</button>
-                        <button class="control-btn">📡 Сканувати</button>
-                    </div>
-                </div>
-                <div id="map" class="map"></div>
+            <div class="console-output" id="systemConsole">
+                <div class="log-entry system">[SYSTEM] Δ DELTA ініціалізовано</div>
+                <div class="log-entry success">[DATABASE] База даних підключена</div>
+                <div class="log-entry info">[NETWORK] З'єднано з центральним сервером</div>
             </div>
-
-            <!-- Recent Activity -->
-            <div class="activity-section">
-                <h3>Остання активність</h3>
-                <div class="activity-list">
-                    <div class="activity-item">
-                        <div class="activity-icon">🔴</div>
-                        <div class="activity-content">
-                            <div class="activity-title">Рух виявлено</div>
-                            <div class="activity-desc">Київ, вул. Хрещатик, 25 • Камера #KY-487</div>
-                            <div class="activity-time">2 хвилини тому</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon">🟡</div>
-                        <div class="activity-content">
-                            <div class="activity-title">Доступ до системи</div>
-                            <div class="activity-desc">Оператор #5842 • Центральний офіс</div>
-                            <div class="activity-time">5 хвилин тому</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon">🔵</div>
-                        <div class="activity-content">
-                            <div class="activity-title">Оновлення бази</div>
-                            <div class="activity-desc">Додано 15 нових об'єктів моніторингу</div>
-                            <div class="activity-time">12 хвилин тому</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Panel -->
-        <div class="right-panel">
-            <div class="panel-section">
-                <h3>Обрані об'єкти</h3>
-                <div class="favorite-list">
-                    <div class="favorite-item">
-                        <div class="fav-icon">🏛️</div>
-                        <div class="fav-info">
-                            <div class="fav-title">Урядова будівля</div>
-                            <div class="fav-desc">Київ, вул. Банкова</div>
-                        </div>
-                    </div>
-                    <div class="favorite-item">
-                        <div class="fav-icon">🏢</div>
-                        <div class="fav-info">
-                            <div class="fav-title">Житловий комплекс</div>
-                            <div class="fav-desc">Київ, Троєщина</div>
-                        </div>
-                    </div>
-                    <div class="favorite-item">
-                        <div class="fav-icon">🚧</div>
-                        <div class="fav-info">
-                            <div class="fav-title">КПП Краковець</div>
-                            <div class="fav-desc">Прикордонний пункт</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel-section">
-                <h3>Швидкий доступ</h3>
-                <div class="quick-actions">
-                    <button class="action-btn">
-                        <span class="action-icon">📋</span>
-                        Звіт
-                    </button>
-                    <button class="action-btn">
-                        <span class="action-icon">🎥</span>
-                        Запис
-                    </button>
-                    <button class="action-btn">
-                        <span class="action-icon">🔔</span>
-                        Сповіщення
-                    </button>
-                    <button class="action-btn">
-                        <span class="action-icon">📊</span>
-                        Графіки
-                    </button>
-                </div>
-            </div>
-
-            <div class="panel-section">
-                <h3>Системна інформація</h3>
-                <div class="system-info">
-                    <div class="info-item">
-                        <span>Версія:</span>
-                        <span>DELTA 2.4.8</span>
-                    </div>
-                    <div class="info-item">
-                        <span>Оновлено:</span>
-                        <span>26.09.2025</span>
-                    </div>
-                    <div class="info-item">
-                        <span>Статус:</span>
-                        <span class="status-active">Активна</span>
-                    </div>
-                    <div class="info-item">
-                        <span>База даних:</span>
-                        <span class="status-synced">Синхронізовано</span>
-                    </div>
-                </div>
+            <div class="console-input">
+                <input type="text" id="consoleInput" placeholder="Введіть команду...">
+                <button onclick="executeCommand()">ВИКОНАТИ</button>
             </div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="js/map.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Modals -->
+    <div id="personSearchModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('personSearchModal')">&times;</span>
+            <h2>ПОШУК ОСОБИ</h2>
+            <div class="search-form">
+                <input type="text" id="personSearch" placeholder="ПІБ, дата народження, ID...">
+                <button onclick="searchPerson()">ПОШУК</button>
+            </div>
+            <div class="search-results" id="personResults"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/delta-core.js"></script>
+    <script src="js/delta-map.js"></script>
+    <script src="js/delta-database.js"></script>
+    <script src="js/delta-analytics.js"></script>
 </body>
 </html>
