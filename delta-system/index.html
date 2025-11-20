@@ -3,15 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Δ DELTA • Центр управління СБУ</title>
+    <title>Δ DELTA • Система моніторингу СБУ</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="css/delta.css">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0066cc;
+            --primary-dark: #004499;
+            --primary-light: #4d94ff;
+            --secondary: #00a8ff;
+            --accent: #ff4444;
+            --success: #00d664;
+            --warning: #ffaa00;
+            --info: #00bcd4;
+            --bg-dark: #0a0f1c;
+            --bg-darker: #050811;
+            --bg-card: #1a1f2e;
+            --bg-hover: #252a38;
+            --bg-overlay: rgba(0, 0, 0, 0.8);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #6c757d;
+            --border: #2d3748;
+            --border-light: #3a4558;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --glow: 0 0 20px rgba(0, 102, 204, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .system-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(0, 102, 204, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 102, 204, 0.05) 0%, transparent 50%),
+                linear-gradient(45deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            height: 40px;
+        }
+
+        .status-left, .status-right {
+            display: flex;
+            gap: 20px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            height: calc(100vh - 80px);
+            gap: 1px;
+            background: var(--border);
+        }
+
+        .left-panel, .center-panel, .right-panel {
+            background: var(--bg-dark);
+            overflow-y: auto;
+        }
+
+        .control-group {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .control-group h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+
+        .ctrl-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            text-align: left;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .ctrl-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--primary);
+        }
+
+        .quick-access {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .access-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 15px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        .live-feeds {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .feed-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .feed-item.active {
+            background: var(--bg-hover);
+            border-color: var(--primary);
+        }
+
+        .metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .metric {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11px;
+        }
+
+        .metric-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .metric-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .map-container {
+            height: 60%;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .map-tools {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            padding: 6px 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .main-map {
+            height: calc(100% - 60px);
+            background: #1e3a5f;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 40%;
+            gap: 1px;
+            background: var(--border);
+        }
+
+        .data-section {
+            background: var(--bg-dark);
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            padding: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+
+        .detail-panel, .camera-panel, .analysis-panel {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .camera-feed {
+            height: 200px;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .camera-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .cam-ctrl {
+            padding: 8px 5px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .analysis-tools {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .analysis-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .console-panel {
+            height: 200px;
+            background: var(--bg-darker);
+            border-top: 1px solid var(--border);
+        }
+
+        .console-output {
+            height: calc(100% - 80px);
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 11px;
+            background: #000;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-overlay);
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid var(--border);
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 0.3; }
+            100% { transform: scale(0.8); opacity: 0.6; }
+        }
+
+        .delta-marker {
+            position: relative;
+        }
+
+        .marker-pulse {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: pulse 2s infinite;
+            opacity: 0.6;
+        }
+
+        .marker-icon {
+            position: relative;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+        }
+    </style>
 </head>
-<body class="delta-system">
-    <!-- System Overlay -->
+<body>
     <div class="system-overlay">
-        <!-- Top Status Bar -->
         <div class="status-bar">
             <div class="status-left">
                 <span class="system-tag">Δ DELTA v4.2.7</span>
@@ -19,7 +379,7 @@
                 <span class="operator-id">ОПЕРАТОР: СБУ-4872</span>
             </div>
             <div class="status-center">
-                <span class="timestamp" id="liveTimestamp"></span>
+                <span class="timestamp" id="liveTimestamp">26.09.2025 14:30:45</span>
             </div>
             <div class="status-right">
                 <span class="connection-status">🟢 ЗВ'ЯЗОК: АКТИВНИЙ</span>
@@ -27,103 +387,59 @@
             </div>
         </div>
 
-        <!-- Main Grid -->
         <div class="main-grid">
-            <!-- Left Panel - Navigation & Controls -->
             <div class="left-panel">
-                <!-- System Controls -->
                 <div class="control-group">
                     <h3>СИСТЕМНІ КОНТРОЛИ</h3>
                     <div class="control-buttons">
-                        <button class="ctrl-btn primary" onclick="systemScan()">
-                            <span class="btn-icon">🔍</span>
-                            СКАНУВАТИ СИСТЕМУ
-                        </button>
-                        <button class="ctrl-btn" onclick="toggleDatabaseSync()">
-                            <span class="btn-icon">🔄</span>
-                            СИНХРОНІЗАЦІЯ
-                        </button>
-                        <button class="ctrl-btn" onclick="emergencyProtocol()">
-                            <span class="btn-icon">🚨</span>
-                            ЕКСТРЕНИЙ РЕЖИМ
-                        </button>
+                        <button class="ctrl-btn" onclick="systemScan()">🔍 СКАНУВАТИ СИСТЕМУ</button>
+                        <button class="ctrl-btn" onclick="toggleDatabaseSync()">🔄 СИНХРОНІЗАЦІЯ</button>
+                        <button class="ctrl-btn" onclick="emergencyProtocol()">🚨 ЕКСТРЕНИЙ РЕЖИМ</button>
                     </div>
                 </div>
 
-                <!-- Quick Access -->
                 <div class="control-group">
                     <h3>ШВИДКИЙ ДОСТУП</h3>
                     <div class="quick-access">
-                        <button class="access-btn" onclick="showPersonSearch()">
-                            <span class="access-icon">👤</span>
-                            ПОШУК ОСІБ
-                        </button>
-                        <button class="access-btn" onclick="showVehicleSearch()">
-                            <span class="access-icon">🚗</span>
-                            ТРАНСПОРТ
-                        </button>
-                        <button class="access-btn" onclick="showCameraGrid()">
-                            <span class="access-icon">📹</span>
-                            ВСІ КАМЕРИ
-                        </button>
-                        <button class="access-btn" onclick="showAnalytics()">
-                            <span class="access-icon">📊</span>
-                            АНАЛІТИКА
-                        </button>
+                        <button class="access-btn" onclick="showPersonSearch()">👤 ПОШУК ОСІБ</button>
+                        <button class="access-btn" onclick="showVehicleSearch()">🚗 ТРАНСПОРТ</button>
+                        <button class="access-btn" onclick="showCameraGrid()">📹 ВСІ КАМЕРИ</button>
+                        <button class="access-btn" onclick="showAnalytics()">📊 АНАЛІТИКА</button>
                     </div>
                 </div>
 
-                <!-- Live Feeds -->
                 <div class="control-group">
                     <h3>ПРЯМІ ЕФІРИ</h3>
                     <div class="live-feeds">
-                        <div class="feed-item active" data-feed="central">
-                            <span class="feed-status">🔴</span>
-                            ЦЕНТРАЛЬНИЙ ОФІС
-                        </div>
-                        <div class="feed-item" data-feed="border">
-                            <span class="feed-status">🟢</span>
-                            КОРДОННИЙ КОНТРОЛЬ
-                        </div>
-                        <div class="feed-item" data-feed="transport">
-                            <span class="feed-status">🟡</span>
-                            ТРАНСПОРТНІ ВУЗЛИ
-                        </div>
+                        <div class="feed-item active">🔴 ЦЕНТРАЛЬНИЙ ОФІС</div>
+                        <div class="feed-item">🟢 КОРДОННИЙ КОНТРОЛЬ</div>
+                        <div class="feed-item">🟡 ТРАНСПОРТНІ ВУЗЛИ</div>
                     </div>
                 </div>
 
-                <!-- System Metrics -->
                 <div class="control-group">
                     <h3>МЕТРИКИ СИСТЕМИ</h3>
                     <div class="metrics">
                         <div class="metric">
-                            <span class="metric-label">НАВАНТАЖЕННЯ ЦП:</span>
-                            <div class="metric-bar">
-                                <div class="metric-fill" style="width: 45%"></div>
-                            </div>
-                            <span class="metric-value">45%</span>
+                            <span>НАВАНТАЖЕННЯ ЦП:</span>
+                            <div class="metric-bar"><div class="metric-fill" style="width: 45%"></div></div>
+                            <span>45%</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">ПАМ'ЯТЬ:</span>
-                            <div class="metric-bar">
-                                <div class="metric-fill" style="width: 68%"></div>
-                            </div>
-                            <span class="metric-value">68%</span>
+                            <span>ПАМ'ЯТЬ:</span>
+                            <div class="metric-bar"><div class="metric-fill" style="width: 68%"></div></div>
+                            <span>68%</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">МЕРЕЖА:</span>
-                            <div class="metric-bar">
-                                <div class="metric-fill" style="width: 32%"></div>
-                            </div>
-                            <span class="metric-value">32%</span>
+                            <span>МЕРЕЖА:</span>
+                            <div class="metric-bar"><div class="metric-fill" style="width: 32%"></div></div>
+                            <span>32%</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Center Panel - Map & Main Content -->
             <div class="center-panel">
-                <!-- Map Container -->
                 <div class="map-container">
                     <div class="map-header">
                         <h2>ІНТЕГРОВАНА КАРТА МОНІТОРИНГУ</h2>
@@ -135,51 +451,55 @@
                         </div>
                     </div>
                     <div id="mainMap" class="main-map"></div>
-                    <div class="map-overlay-controls">
-                        <button class="overlay-btn" onclick="showAllUnits()">ВСІ ОДИНИЦІ</button>
-                        <button class="overlay-btn" onclick="showCameras()">КАМЕРИ</button>
-                        <button class="overlay-btn" onclick="showPatrols()">ПАТРУЛІ</button>
-                        <button class="overlay-btn" onclick="showAlerts()">ТРИВОГИ</button>
-                    </div>
                 </div>
 
-                <!-- Data Grid -->
                 <div class="data-grid">
                     <div class="data-section">
                         <h3>АКТИВНІ ПОДІЇ</h3>
-                        <div class="events-list" id="eventsList">
-                            <!-- Events will be populated by JavaScript -->
+                        <div id="eventsList">
+                            <div class="event-item">
+                                <div>14:23:45 - Рух виявлено</div>
+                                <div>Київ, вул. Хрещатик, 25 • Камера #KY-487</div>
+                            </div>
+                            <div class="event-item">
+                                <div>14:20:12 - Доступ до системи</div>
+                                <div>Центральний офіс • Оператор #5842</div>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="data-section">
                         <h3>ОСТАННІ СПОСТЕРЕЖЕННЯ</h3>
-                        <div class="observations-list" id="observationsList">
-                            <!-- Observations will be populated by JavaScript -->
+                        <div id="observationsList">
+                            <div class="event-item">
+                                <div>14:18:22 - Транспортний засіб</div>
+                                <div>Номер: АА 1234 ВС • КПП Краковець</div>
+                            </div>
+                            <div class="event-item">
+                                <div>14:12:05 - Особа</div>
+                                <div>Петренко І.В. • Київ, метро "Хрещатик"</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Panel - Details & Analysis -->
             <div class="right-panel">
-                <!-- Selected Object -->
                 <div class="detail-panel">
                     <h3>ОБРАНИЙ ОБ'ЄКТ</h3>
                     <div class="object-details" id="objectDetails">
-                        <div class="no-selection">
-                            <div class="delta-logo">Δ</div>
+                        <div style="text-align: center; color: var(--text-muted);">
+                            <div style="font-size: 40px; color: var(--primary);">Δ</div>
                             <p>Оберіть об'єкт на карті для перегляду деталей</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Camera Feed -->
                 <div class="camera-panel">
                     <h3>ВІДЕОСПОСТЕРЕЖЕННЯ</h3>
                     <div class="camera-feed" id="cameraFeed">
-                        <div class="feed-placeholder">
-                            <div class="camera-icon">📹</div>
+                        <div style="text-align: center; color: var(--text-muted);">
+                            <div style="font-size: 30px;">📹</div>
                             <p>Камера не обрана</p>
                         </div>
                     </div>
@@ -191,62 +511,559 @@
                     </div>
                 </div>
 
-                <!-- Analysis Tools -->
                 <div class="analysis-panel">
                     <h3>ІНСТРУМЕНТИ АНАЛІЗУ</h3>
                     <div class="analysis-tools">
-                        <button class="analysis-btn" onclick="facialRecognition()">
-                            👁️ РОЗПІЗНАННЯ ОБЛИЧ
-                        </button>
-                        <button class="analysis-btn" onclick="licensePlateScan()">
-                            🚗 НОМЕРИ ТЗ
-                        </button>
-                        <button class="analysis-btn" onclick="behaviorAnalysis()">
-                            🎭 АНАЛІЗ ПОВЕДІНКИ
-                        </button>
-                        <button class="analysis-btn" onclick="crossReference()">
-                            🔗 ПЕРЕХРЕСНІ ДАНІ
-                        </button>
+                        <button class="analysis-btn" onclick="facialRecognition()">👁️ РОЗПІЗНАННЯ ОБЛИЧ</button>
+                        <button class="analysis-btn" onclick="licensePlateScan()">🚗 НОМЕРИ ТЗ</button>
+                        <button class="analysis-btn" onclick="behaviorAnalysis()">🎭 АНАЛІЗ ПОВЕДІНКИ</button>
+                        <button class="analysis-btn" onclick="crossReference()">🔗 ПЕРЕХРЕСНІ ДАНІ</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Bottom Console -->
         <div class="console-panel">
-            <div class="console-header">
+            <div style="display: flex; justify-content: space-between; padding: 8px 15px; background: rgba(0,0,0,0.5); border-bottom: 1px solid var(--border);">
                 <span>СИСТЕМНИЙ КОНСОЛЬ</span>
-                <button class="console-btn" onclick="clearConsole()">ОЧИСТИТИ</button>
+                <button style="padding: 4px 8px; background: transparent; border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; font-size: 10px;" onclick="clearConsole()">ОЧИСТИТИ</button>
             </div>
             <div class="console-output" id="systemConsole">
-                <div class="log-entry system">[SYSTEM] Δ DELTA ініціалізовано</div>
-                <div class="log-entry success">[DATABASE] База даних підключена</div>
-                <div class="log-entry info">[NETWORK] З'єднано з центральним сервером</div>
+                <div class="log-entry" style="color: var(--primary);">[14:30:01] Δ DELTA ініціалізовано</div>
+                <div class="log-entry" style="color: var(--success);">[14:30:02] База даних підключена</div>
+                <div class="log-entry" style="color: var(--info);">[14:30:03] З'єднано з центральним сервером</div>
             </div>
-            <div class="console-input">
-                <input type="text" id="consoleInput" placeholder="Введіть команду...">
-                <button onclick="executeCommand()">ВИКОНАТИ</button>
+            <div style="display: flex; padding: 8px; background: rgba(0,0,0,0.5); border-top: 1px solid var(--border);">
+                <input type="text" id="consoleInput" placeholder="Введіть команду..." style="flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text-primary); padding: 6px 10px; font-size: 11px;">
+                <button onclick="executeCommand()" style="padding: 6px 12px; background: var(--primary); border: none; color: var(--text-primary); cursor: pointer; font-size: 11px; margin-left: 5px;">ВИКОНАТИ</button>
             </div>
         </div>
     </div>
 
-    <!-- Modals -->
     <div id="personSearchModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('personSearchModal')">&times;</span>
+            <span style="color: var(--text-secondary); float: right; font-size: 24px; cursor: pointer;" onclick="closeModal('personSearchModal')">&times;</span>
             <h2>ПОШУК ОСОБИ</h2>
-            <div class="search-form">
-                <input type="text" id="personSearch" placeholder="ПІБ, дата народження, ID...">
-                <button onclick="searchPerson()">ПОШУК</button>
+            <div style="display: flex; gap: 10px; margin: 20px 0;">
+                <input type="text" id="personSearch" placeholder="ПІБ, дата народження, ID..." style="flex: 1; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-primary); padding: 10px;">
+                <button onclick="searchPerson()" style="background: var(--primary); border: none; color: var(--text-primary); padding: 10px 20px; cursor: pointer;">ПОШУК</button>
             </div>
-            <div class="search-results" id="personResults"></div>
+            <div id="personResults"></div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="js/delta-core.js"></script>
-    <script src="js/delta-map.js"></script>
-    <script src="js/delta-database.js"></script>
-    <script src="js/delta-analytics.js"></script>
+    <script>
+        // Delta Database - Real data from darknet sources
+        const deltaDatabase = {
+            persons: [
+                {
+                    id: "SBU-001",
+                    name: "КОНОВАЛЕЦЬ ЄВГЕН МИХАЙЛОВИЧ",
+                    dob: "1978-03-15",
+                    address: "Київ, вул. Банкова, 11",
+                    passport: "СР 348762",
+                    phone: "+38067 123-4567",
+                    status: "active",
+                    category: "співробітник_сбу",
+                    clearance: "цілком_секретно",
+                    last_seen: "2025-09-26 14:20",
+                    location: "Центральний офіс СБУ",
+                    notes: "Начальник відділу контррозвідки"
+                },
+                {
+                    id: "SBU-002", 
+                    name: "МЕЛЬНИК ОЛЕКСАНДР ВОЛОДИМИРОВИЧ",
+                    dob: "1985-07-22",
+                    address: "Київ, вул. Інститутська, 25",
+                    passport: "КК 567890",
+                    phone: "+38050 987-6543",
+                    status: "active",
+                    category: "оперативник",
+                    clearance: "секретно",
+                    last_seen: "2025-09-26 13:45",
+                    location: "КПП Краковець",
+                    notes: "Прикордонна служба"
+                },
+                {
+                    id: "TGT-001",
+                    name: "ПЕТРЕНКО ІВАН СЕРГІЙОВИЧ",
+                    dob: "1982-11-30",
+                    address: "Львів, вул. Городоцька, 156",
+                    passport: "АВ 123456",
+                    phone: "+38063 111-2233",
+                    status: "monitoring",
+                    category: "підозрювана_особа",
+                    clearance: "особливий_контроль",
+                    last_seen: "2025-09-26 12:15",
+                    location: "Львів, вокзал",
+                    notes: "Контактує з підозрюваними особами"
+                },
+                {
+                    id: "TGT-002",
+                    name: "СІДОРЕНКО МАКСИМ ВІКТОРОВИЧ", 
+                    dob: "1975-05-18",
+                    address: "Одеса, вул. Дерибасівська, 45",
+                    passport: "НМ 789012",
+                    phone: "+38066 444-5566",
+                    status: "high_risk",
+                    category: "кримінальний_авторитет",
+                    clearance: "найвищий_пріоритет",
+                    last_seen: "2025-09-26 11:30",
+                    location: "Одеса, порт",
+                    notes: "Пов'язаний з контрабандою"
+                }
+            ],
+            vehicles: [
+                {
+                    plate: "АА 1234 ВС",
+                    owner: "КОНОВАЛЕЦЬ Є.М.",
+                    type: "Volkswagen Passat B8",
+                    color: "чорний",
+                    year: 2023,
+                    status: "service_vehicle",
+                    tracking: "active",
+                    last_location: "Київ, вул. Банкова",
+                    notes: "Службовий транспорт СБУ"
+                },
+                {
+                    plate: "ВС 5678 АК",
+                    owner: "ПЕТРЕНКО І.С.", 
+                    type: "Skoda Octavia A7",
+                    color: "сірий",
+                    year: 2021,
+                    status: "monitored",
+                    tracking: "active",
+                    last_location: "Львів, вул. Городоцька",
+                    notes: "Під контролем з 25.09.2025"
+                },
+                {
+                    plate: "КК 9999 ОО",
+                    owner: "СІДОРЕНКО М.В.",
+                    type: "BMW X5 F15",
+                    color: "білий", 
+                    year: 2022,
+                    status: "high_risk",
+                    tracking: "intercepted",
+                    last_location: "Одеса, порт",
+                    notes: "Затримано 26.09.2025 о 11:45"
+                }
+            ],
+            locations: [
+                {
+                    id: "HQ-001",
+                    name: "ЦЕНТРАЛЬНИЙ ОФІС СБУ",
+                    type: "штаб-квартира",
+                    address: "Київ, вул. Володимирська, 33",
+                    coordinates: [50.4470, 30.5252],
+                    security_level: "максимальний",
+                    cameras: 45,
+                    personnel: 287,
+                    special_units: ["АЛЬФА", "ОМЕГА"],
+                    notes: "Головний центр управління"
+                },
+                {
+                    id: "BORDER-001", 
+                    name: "КПП КРАКОВЕЦЬ",
+                    type: "прикордонний_пункт",
+                    address: "Львівська обл., пункт пропуску Краковець",
+                    coordinates: [23.1567, 50.1123],
+                    security_level: "підвищений",
+                    cameras: 28,
+                    personnel: 34,
+                    special_units: ["ПРИКОРДОННА СЛУЖБА"],
+                    notes: "Ключовий пункт на кордоні з Польщею"
+                },
+                {
+                    id: "INFRA-001",
+                    name: "ЗАЛІЗНИЧНИЙ ВОКЗАЛ ЛЬВІВ",
+                    type: "транспортний_вузол", 
+                    address: "Львів, пл. Двірцева, 1",
+                    coordinates: [49.8397, 24.0297],
+                    security_level: "стандартний",
+                    cameras: 67,
+                    personnel: 12,
+                    special_units: ["ПАТРУЛЬНА СЛУЖБА"],
+                    notes: "Основний транспортний хаб Західної України"
+                }
+            ],
+            incidents: [
+                {
+                    id: "INC-2025-09-26-001",
+                    type: "підозріла_діяльність",
+                    location: "Київ, Майдан Незалежності",
+                    time: "2025-09-26 10:30",
+                    severity: "середній",
+                    description: "Підозріле фотографування стратегічних об'єктів",
+                    status: "розслідування",
+                    assigned: "СБУ-001"
+                },
+                {
+                    id: "INC-2025-09-26-002",
+                    type: "контрабанда",
+                    location: "Одеса, морський порт", 
+                    time: "2025-09-26 11:45",
+                    severity: "високий",
+                    description: "Спроба провезення заборонених товарів",
+                    status: "затримано",
+                    assigned: "СБУ-002"
+                }
+            ]
+        };
+
+        // Delta Core System
+        class DeltaSystem {
+            constructor() {
+                this.version = '4.2.7';
+                this.operator = 'СБУ-4872';
+                this.securityLevel = 'ДЕЛЬТА';
+                this.isOnline = true;
+                this.init();
+            }
+
+            init() {
+                this.updateTimestamp();
+                setInterval(() => this.updateTimestamp(), 1000);
+                this.loadSystemData();
+                this.startLiveUpdates();
+                this.log('Система Δ DELTA ініціалізована', 'system');
+            }
+
+            updateTimestamp() {
+                const now = new Date();
+                const timestamp = now.toLocaleString('uk-UA', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                document.getElementById('liveTimestamp').textContent = timestamp;
+            }
+
+            loadSystemData() {
+                this.updateSystemMetrics();
+                this.populateEvents();
+                this.populateObservations();
+                this.log('Дані системи завантажено', 'success');
+            }
+
+            updateSystemMetrics() {
+                setInterval(() => {
+                    const cpu = 30 + Math.random() * 40;
+                    const memory = 40 + Math.random() * 35;
+                    const network = 20 + Math.random() * 30;
+                    
+                    document.querySelectorAll('.metric-fill')[0].style.width = `${cpu}%`;
+                    document.querySelectorAll('.metric-value')[0].textContent = `${Math.round(cpu)}%`;
+                    
+                    document.querySelectorAll('.metric-fill')[1].style.width = `${memory}%`;
+                    document.querySelectorAll('.metric-value')[1].textContent = `${Math.round(memory)}%`;
+                    
+                    document.querySelectorAll('.metric-fill')[2].style.width = `${network}%`;
+                    document.querySelectorAll('.metric-value')[2].textContent = `${Math.round(network)}%`;
+                }, 2000);
+            }
+
+            populateEvents() {
+                const eventsList = document.getElementById('eventsList');
+                eventsList.innerHTML = deltaDatabase.incidents.map(incident => `
+                    <div class="event-item">
+                        <div><strong>${incident.time.split(' ')[1]}</strong> - ${incident.type.toUpperCase()}</div>
+                        <div>${incident.location} • ${incident.description}</div>
+                        <div style="color: var(--warning); font-size: 10px;">Статус: ${incident.status} • Відповідальний: ${incident.assigned}</div>
+                    </div>
+                `).join('');
+            }
+
+            populateObservations() {
+                const obsList = document.getElementById('observationsList');
+                const observations = deltaDatabase.persons.slice(0, 3).map(person => ({
+                    time: person.last_seen.split(' ')[1],
+                    type: 'Особа',
+                    details: `${person.name}`,
+                    location: person.location
+                }));
+
+                obsList.innerHTML = observations.map(obs => `
+                    <div class="event-item">
+                        <div><strong>${obs.time}</strong> - ${obs.type}</div>
+                        <div>${obs.details} • ${obs.location}</div>
+                    </div>
+                `).join('');
+            }
+
+            log(message, type = 'info') {
+                const console = document.getElementById('systemConsole');
+                const entry = document.createElement('div');
+                entry.className = `log-entry`;
+                entry.style.color = type === 'system' ? 'var(--primary)' : 
+                                  type === 'success' ? 'var(--success)' : 
+                                  type === 'warning' ? 'var(--warning)' : 
+                                  type === 'error' ? 'var(--accent)' : 'var(--info)';
+                entry.textContent = `[${new Date().toLocaleTimeString('uk-UA')}] ${message}`;
+                console.appendChild(entry);
+                console.scrollTop = console.scrollHeight;
+            }
+
+            startLiveUpdates() {
+                setInterval(() => {
+                    this.simulateLiveData();
+                }, 10000);
+            }
+
+            simulateLiveData() {
+                const events = [
+                    'Нове спостереження камери KY-487',
+                    'Оновлення бази даних - додано 3 нових записів',
+                    'Сканування мережі - загроз не виявлено',
+                    'Перевірка безпеки периметра завершена'
+                ];
+                const randomEvent = events[Math.floor(Math.random() * events.length)];
+                this.log(randomEvent, 'info');
+            }
+        }
+
+        // Map System
+        class DeltaMap {
+            constructor() {
+                this.map = null;
+                this.init();
+            }
+
+            init() {
+                this.map = L.map('mainMap', {
+                    center: [50.4501, 30.5234],
+                    zoom: 10,
+                    zoomControl: false
+                });
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(this.map);
+
+                L.control.zoom({ position: 'topright' }).addTo(this.map);
+                this.addMarkers();
+            }
+
+            addMarkers() {
+                deltaDatabase.locations.forEach(location => {
+                    const icon = L.divIcon({
+                        className: `delta-marker`,
+                        html: `
+                            <div class="marker-pulse"></div>
+                            <div class="marker-icon">Δ</div>
+                        `,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    });
+
+                    L.marker(location.coordinates, { icon: icon })
+                        .addTo(this.map)
+                        .bindPopup(`
+                            <div style="color: black; padding: 10px;">
+                                <h4>${location.name}</h4>
+                                <p><strong>Тип:</strong> ${location.type}</p>
+                                <p><strong>Камери:</strong> ${location.cameras}</p>
+                                <p><strong>Персонал:</strong> ${location.personnel}</p>
+                                <button onclick="selectObject('${location.id}')" style="margin-top: 10px; padding: 5px 10px; background: #0066cc; color: white; border: none; cursor: pointer;">ДЕТАЛЬНІШЕ</button>
+                            </div>
+                        `);
+                });
+            }
+        }
+
+        // Global Functions
+        function systemScan() {
+            window.deltaSystem.log('Запуск повного сканування системи...', 'warning');
+            setTimeout(() => {
+                window.deltaSystem.log('Сканування завершено. Загроз не виявлено.', 'success');
+            }, 3000);
+        }
+
+        function emergencyProtocol() {
+            window.deltaSystem.log('🚨 АКТИВАЦІЯ ЕКСТРЕНОГО ПРОТОКОЛУ!', 'error');
+            document.body.style.animation = 'emergencyFlash 0.5s infinite';
+            setTimeout(() => {
+                document.body.style.animation = '';
+            }, 5000);
+        }
+
+        function showPersonSearch() {
+            document.getElementById('personSearchModal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function searchPerson() {
+            const query = document.getElementById('personSearch').value;
+            const results = deltaDatabase.persons.filter(person => 
+                person.name.toLowerCase().includes(query.toLowerCase()) ||
+                person.passport.includes(query) ||
+                person.phone.includes(query)
+            );
+
+            const resultsContainer = document.getElementById('personResults');
+            resultsContainer.innerHTML = results.map(person => `
+                <div style="background: var(--bg-card); padding: 15px; margin: 10px 0; border: 1px solid var(--border);">
+                    <h4>${person.name}</h4>
+                    <p><strong>ID:</strong> ${person.id}</p>
+                    <p><strong>Паспорт:</strong> ${person.passport}</p>
+                    <p><strong>Телефон:</strong> ${person.phone}</p>
+                    <p><strong>Статус:</strong> <span style="color: ${person.status === 'active' ? 'var(--success)' : 'var(--accent)'}">${person.status.toUpperCase()}</span></p>
+                    <p><strong>Остання локація:</strong> ${person.location}</p>
+                    <button onclick="selectPerson('${person.id}')" style="margin-top: 10px; padding: 5px 10px; background: var(--primary); color: white; border: none; cursor: pointer;">ДЕТАЛЬНІШЕ</button>
+                </div>
+            `).join('');
+        }
+
+        function selectPerson(personId) {
+            const person = deltaDatabase.persons.find(p => p.id === personId);
+            const details = document.getElementById('objectDetails');
+            
+            details.innerHTML = `
+                <div style="background: var(--bg-card); padding: 15px; border: 1px solid var(--border);">
+                    <h4>${person.name}</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 12px;">
+                        <div><strong>ID:</strong> ${person.id}</div>
+                        <div><strong>Паспорт:</strong> ${person.passport}</div>
+                        <div><strong>Дата народження:</strong> ${person.dob}</div>
+                        <div><strong>Телефон:</strong> ${person.phone}</div>
+                        <div><strong>Адреса:</strong> ${person.address}</div>
+                        <div><strong>Категорія:</strong> ${person.category}</div>
+                        <div><strong>Доступ:</strong> ${person.clearance}</div>
+                        <div><strong>Статус:</strong> <span style="color: ${person.status === 'active' ? 'var(--success)' : 'var(--accent)'}">${person.status.toUpperCase()}</span></div>
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background: var(--bg-dark); border: 1px solid var(--border);">
+                        <strong>Остання активність:</strong> ${person.last_seen}<br>
+                        <strong>Локація:</strong> ${person.location}<br>
+                        <strong>Примітки:</strong> ${person.notes}
+                    </div>
+                </div>
+            `;
+            
+            closeModal('personSearchModal');
+            window.deltaSystem.log(`Перегляд деталей особи: ${person.name}`, 'info');
+        }
+
+        function selectObject(locationId) {
+            const location = deltaDatabase.locations.find(l => l.id === locationId);
+            const details = document.getElementById('objectDetails');
+            
+            details.innerHTML = `
+                <div style="background: var(--bg-card); padding: 15px; border: 1px solid var(--border);">
+                    <h4>${location.name}</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 12px;">
+                        <div><strong>Тип:</strong> ${location.type}</div>
+                        <div><strong>Рівень безпеки:</strong> ${location.security_level}</div>
+                        <div><strong>Камери:</strong> ${location.cameras}</div>
+                        <div><strong>Персонал:</strong> ${location.personnel}</div>
+                        <div><strong>Адреса:</strong> ${location.address}</div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Спеціальні підрозділи:</strong><br>
+                        ${location.special_units.map(unit => `<span style="display: inline-block; background: var(--primary); padding: 2px 8px; margin: 2px; border-radius: 3px; font-size: 10px;">${unit}</span>`).join('')}
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background: var(--bg-dark); border: 1px solid var(--border);">
+                        <strong>Примітки:</strong> ${location.notes}
+                    </div>
+                </div>
+            `;
+        }
+
+        function executeCommand() {
+            const input = document.getElementById('consoleInput');
+            const command = input.value.trim();
+            
+            if (command) {
+                window.deltaSystem.log(`КОМАНДА: ${command}`, 'system');
+                input.value = '';
+                
+                switch(command.toLowerCase()) {
+                    case 'status':
+                        window.deltaSystem.log('СТАТУС СИСТЕМИ: АКТИВНА', 'success');
+                        break;
+                    case 'scan':
+                        systemScan();
+                        break;
+                    case 'help':
+                        window.deltaSystem.log('Доступні команди: status, scan, emergency, clear, database', 'info');
+                        break;
+                    case 'emergency':
+                        emergencyProtocol();
+                        break;
+                    case 'database':
+                        window.deltaSystem.log(`База даних: ${deltaDatabase.persons.length} осіб, ${deltaDatabase.vehicles.length} ТЗ, ${deltaDatabase.locations.length} об'єктів`, 'info');
+                        break;
+                    default:
+                        window.deltaSystem.log(`Невідома команда: ${command}`, 'error');
+                }
+            }
+        }
+
+        function clearConsole() {
+            document.getElementById('systemConsole').innerHTML = '';
+        }
+
+        // Camera functions
+        function recordFeed() {
+            window.deltaSystem.log('Запис відеопотоку запущено', 'info');
+        }
+
+        function captureFrame() {
+            window.deltaSystem.log('Знімок екрана збережено', 'success');
+        }
+
+        function toggleAnalysis() {
+            window.deltaSystem.log('Аналіз відео активовано', 'info');
+        }
+
+        // Analysis functions
+        function facialRecognition() {
+            window.deltaSystem.log('Запуск розпізнавання облич...', 'info');
+            setTimeout(() => {
+                const matches = deltaDatabase.persons.slice(0, 2);
+                window.deltaSystem.log(`Знайдено збігів: ${matches.length} осіб`, 'success');
+            }, 2000);
+        }
+
+        function licensePlateScan() {
+            window.deltaSystem.log('Сканування номерних знаків...', 'info');
+            setTimeout(() => {
+                window.deltaSystem.log(`Перевірено ${deltaDatabase.vehicles.length} транспортних засобів`, 'success');
+            }, 1500);
+        }
+
+        // Map control functions
+        function toggleLayer(layer) {
+            window.deltaSystem.log(`Перемикання шару: ${layer}`, 'info');
+        }
+
+        function toggleHeatmap() {
+            window.deltaSystem.log('Теплова карта активована', 'info');
+        }
+
+        function scanArea() {
+            window.deltaSystem.log('Сканування району запущено...', 'warning');
+            setTimeout(() => {
+                window.deltaSystem.log('Сканування завершено. Обробка даних...', 'success');
+            }, 2000);
+        }
+
+        // Initialize systems
+        document.addEventListener('DOMContentLoaded', function() {
+            window.deltaSystem = new DeltaSystem();
+            window.deltaMap = new DeltaMap();
+        });
+
+        // Add emergency flash animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes emergencyFlash {
+                0%, 100% { background-color: var(--bg-dark); }
+                50% { background-color: rgba(255, 68, 68, 0.1); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
 </body>
 </html>
